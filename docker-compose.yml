@@ -1,19 +1,17 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15-alpine
     container_name: rbac-postgres
     environment:
       POSTGRES_DB: rbac_db
-      POSTGRES_USER: rbac_user
-      POSTGRES_PASSWORD: rbac_password
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U rbac_user -d rbac_db"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d rbac_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -30,6 +28,21 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  app:
+    build: .
+    container_name: rbac_app
+    restart: on-failure
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/rbac_db
+      - SPRING_DATA_REDIS_HOST=redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
 volumes:
   postgres_data:
