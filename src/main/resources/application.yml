@@ -23,3 +23,7 @@ spring:
 jwt:
   secret: 0kbkeYHbuGvgNGRo12POe8jJHKAD8HIau1ZhyndfZ89
   expiration: 86400000
+
+security:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
