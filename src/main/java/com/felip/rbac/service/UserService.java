@@ -1,5 +1,7 @@
 package com.felip.rbac.service;
 
+import com.felip.rbac.exception.EmailAlreadyInUseException;
+import com.felip.rbac.exception.RoleNotConfiguredException;
 import com.felip.rbac.model.entity.Role;
 import com.felip.rbac.model.entity.User;
 import com.felip.rbac.model.enums.RoleName;
@@ -10,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Locale;
 import java.util.Set;
 
 @Service
@@ -22,21 +25,28 @@ public class UserService {
 
     @Transactional
     public User registerUser(String name, String email, String rawPassword) {
-        if (userRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("Email já está em uso.");
+        String normalizedName = name.strip();
+        String normalizedEmail = normalizeEmail(email);
+
+        if (userRepository.existsByEmail(normalizedEmail)) {
+            throw new EmailAlreadyInUseException();
         }
 
         Role userRole = roleRepository.findByName(RoleName.ROLE_USER)
-                .orElseThrow(() -> new IllegalStateException("Role padrão não encontrada."));
+                .orElseThrow(() -> new RoleNotConfiguredException(RoleName.ROLE_USER));
 
         User newUser = User.builder()
-                .name(name)
-                .email(email)
+                .name(normalizedName)
+                .email(normalizedEmail)
                 .password(passwordEncoder.encode(rawPassword))
                 .enabled(true)
                 .roles(Set.of(userRole))
                 .build();
 
         return userRepository.save(newUser);
+    }
+
+    private String normalizeEmail(String email) {
+        return email.strip().toLowerCase(Locale.ROOT);
     }
 }

@@ -1,0 +1,13 @@
+package com.felip.rbac.exception;
+
+public enum ApiErrorCode {
+    VALIDATION_ERROR,
+    MALFORMED_REQUEST,
+    EMAIL_ALREADY_IN_USE,
+    RESOURCE_NOT_FOUND,
+    DATA_CONFLICT,
+    INVALID_CREDENTIALS,
+    AUTHENTICATION_REQUIRED,
+    ACCESS_DENIED,
+    INTERNAL_ERROR
+}
