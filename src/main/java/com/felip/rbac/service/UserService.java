@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 
@@ -40,7 +41,7 @@ public class UserService {
                 .email(normalizedEmail)
                 .password(passwordEncoder.encode(rawPassword))
                 .enabled(true)
-                .roles(Set.of(userRole))
+                .roles(new HashSet<>(Set.of(userRole)))
                 .build();
 
         return userRepository.save(newUser);
