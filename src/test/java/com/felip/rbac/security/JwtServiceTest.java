@@ -72,11 +72,15 @@ class JwtServiceTest {
                 .build();
 
         String token = jwtService.generateToken(userDetails);
-        char replacement = token.charAt(token.length() - 1) == 'a'
-                ? 'b'
-                : 'a';
-        String tamperedToken = token.substring(0, token.length() - 1)
-                + replacement;
+
+        int signatureStart = token.lastIndexOf('.') + 1;
+        char original = token.charAt(signatureStart);
+        char replacement = original == 'A' ? 'B' : 'A';
+
+        String tamperedToken =
+                token.substring(0, signatureStart)
+                        + replacement
+                        + token.substring(signatureStart + 1);
 
         assertThat(jwtService.validateTokenAndGetSubject(tamperedToken))
                 .isNull();

@@ -1,6 +1,7 @@
 package com.felip.rbac.service;
 
 import com.felip.rbac.exception.EmailAlreadyInUseException;
+import com.felip.rbac.exception.ResourceNotFoundException;
 import com.felip.rbac.exception.RoleNotConfiguredException;
 import com.felip.rbac.model.entity.Role;
 import com.felip.rbac.model.entity.User;
@@ -15,6 +16,8 @@ import org.springframework.stereotype.Service;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +48,20 @@ public class UserService {
                 .build();
 
         return userRepository.save(newUser);
+    }
+
+    @Transactional
+    public User replaceRoles(UUID userId, Set<RoleName> roleNames) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário"));
+
+        Set<Role> roles = roleNames.stream()
+                .map(roleName -> roleRepository.findByName(roleName)
+                        .orElseThrow(() -> new RoleNotConfiguredException(roleName)))
+                .collect(Collectors.toCollection(HashSet::new));
+
+        user.setRoles(roles);
+        return user;
     }
 
     private String normalizeEmail(String email) {
