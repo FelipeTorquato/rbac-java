@@ -6,6 +6,7 @@ import com.felip.rbac.dto.user.UserResponse;
 import com.felip.rbac.exception.EmailAlreadyInUseException;
 import com.felip.rbac.exception.GlobalExceptionHandler;
 import com.felip.rbac.model.enums.RoleName;
+import com.felip.rbac.security.BearerTokenResolver;
 import com.felip.rbac.security.JwtAuthenticationFilter;
 import com.felip.rbac.service.AuthService;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -20,17 +22,16 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -45,6 +46,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @MockitoBean
+    private BearerTokenResolver bearerTokenResolver;
 
     @Test
     void shouldRegisterUser() throws Exception {
@@ -179,6 +183,29 @@ class AuthControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code")
                         .value("MALFORMED_REQUEST"));
+    }
+
+    @Test
+    void shouldLogoutCurrentAccessToken() throws Exception {
+        when(bearerTokenResolver.resolve("Bearer access-token"))
+                .thenReturn(Optional.of("access-token"));
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .header(
+                                HttpHeaders.AUTHORIZATION,
+                                "Bearer access-token"
+                        ))
+                .andExpect(status().isNoContent())
+                .andExpect(header().string(
+                        HttpHeaders.CACHE_CONTROL,
+                        "no-store"
+                ))
+                .andExpect(header().string(
+                        HttpHeaders.PRAGMA,
+                        "no-cache"
+                ));
+
+        verify(authService).logout("access-token");
     }
 
     private UserResponse createUserResponse(UUID id, String email) {

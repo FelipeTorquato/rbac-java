@@ -14,6 +14,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -57,10 +58,7 @@ public class JwtService {
 
     public String validateTokenAndGetSubject(String token) {
         try {
-            DecodedJWT decodedJWT = verifier.verify(token);
-            String subject = decodedJWT.getSubject();
-
-            return subject == null || subject.isBlank() ? null : subject;
+            return verify(token).map(VerifiedJwt::subject).orElse(null);
         } catch (JWTVerificationException exception) {
             return null;
         }
@@ -69,4 +67,22 @@ public class JwtService {
     public long getExpirationSeconds() {
         return Duration.ofMillis(expiration).toSeconds();
     }
+
+    public Optional<VerifiedJwt> verify(String token) {
+        try {
+            DecodedJWT decodedJWT = verifier.verify(token);
+            String tokenId = decodedJWT.getId();
+            String subject = decodedJWT.getSubject();
+            Date expiresAt = decodedJWT.getExpiresAt();
+
+            if (tokenId == null || tokenId.isBlank() || subject == null || subject.isBlank() || expiresAt == null) {
+                return Optional.empty();
+            }
+
+            return Optional.of(new VerifiedJwt(tokenId, subject, expiresAt.toInstant()));
+        } catch (JWTVerificationException exception) {
+            return Optional.empty();
+        }
+    }
+
 }

@@ -140,6 +140,22 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .body(problem);
     }
 
+    @ExceptionHandler(InvalidTokenException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidToken(
+            InvalidTokenException exception
+    ) {
+        ProblemDetail problem = ApiProblemDetails.create(
+                HttpStatus.UNAUTHORIZED,
+                ApiErrorCode.INVALID_TOKEN,
+                "Token inválido",
+                exception.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(problem);
+    }
+
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
             MethodArgumentNotValidException exception,

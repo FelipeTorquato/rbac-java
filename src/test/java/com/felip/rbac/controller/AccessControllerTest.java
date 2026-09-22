@@ -2,7 +2,9 @@ package com.felip.rbac.controller;
 
 import com.felip.rbac.exception.GlobalExceptionHandler;
 import com.felip.rbac.security.AuthorizationConfig;
+import com.felip.rbac.security.BearerTokenResolver;
 import com.felip.rbac.security.JwtService;
+import com.felip.rbac.security.TokenBlacklistService;
 import com.felip.rbac.security.UserDetailsServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Import({
         AuthorizationConfig.class,
+        BearerTokenResolver.class,
         GlobalExceptionHandler.class
 })
 class AccessControllerTest {
@@ -33,6 +36,9 @@ class AccessControllerTest {
 
     @MockitoBean
     private UserDetailsServiceImpl userDetailsService;
+
+    @MockitoBean
+    private TokenBlacklistService tokenBlacklistService;
 
     @Test
     @WithMockUser(username = "user@app.com", roles = "USER")

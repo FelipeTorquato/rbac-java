@@ -2,11 +2,14 @@ package com.felip.rbac.service;
 
 import com.felip.rbac.dto.auth.LoginRequest;
 import com.felip.rbac.dto.auth.RegisterRequest;
+import com.felip.rbac.exception.InvalidTokenException;
 import com.felip.rbac.model.entity.Role;
 import com.felip.rbac.model.entity.User;
 import com.felip.rbac.model.enums.RoleName;
 import com.felip.rbac.security.CustomUserDetails;
 import com.felip.rbac.security.JwtService;
+import com.felip.rbac.security.TokenBlacklistService;
+import com.felip.rbac.security.VerifiedJwt;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -16,16 +19,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
@@ -38,6 +41,9 @@ class AuthServiceTest {
 
     @Mock
     private JwtService jwtService;
+
+    @Mock
+    private TokenBlacklistService tokenBlacklistService;
 
     @InjectMocks
     private AuthService authService;
@@ -141,6 +147,33 @@ class AuthServiceTest {
                 .hasMessage("Principal de autenticação inesperado.");
 
         verify(jwtService, never()).generateToken(any());
+    }
+
+    @Test
+    void shouldBlacklistAccessTokenOnLogout() {
+        VerifiedJwt verifiedToken = new VerifiedJwt(
+                "token-id",
+                "user@app.com",
+                Instant.now().plusSeconds(300)
+        );
+
+        when(jwtService.verify("access-token"))
+                .thenReturn(Optional.of(verifiedToken));
+
+        authService.logout("access-token");
+
+        verify(tokenBlacklistService).revoke(verifiedToken);
+    }
+
+    @Test
+    void shouldRejectInvalidTokenOnLogout() {
+        when(jwtService.verify("invalid-token"))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.logout("invalid-token"))
+                .isInstanceOf(InvalidTokenException.class);
+
+        verify(tokenBlacklistService, never()).revoke(any());
     }
 
     private User createUser(String email) {

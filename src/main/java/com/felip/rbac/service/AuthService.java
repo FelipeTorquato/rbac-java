@@ -4,9 +4,12 @@ import com.felip.rbac.dto.auth.AuthenticationResponse;
 import com.felip.rbac.dto.auth.LoginRequest;
 import com.felip.rbac.dto.auth.RegisterRequest;
 import com.felip.rbac.dto.user.UserResponse;
+import com.felip.rbac.exception.InvalidTokenException;
 import com.felip.rbac.model.entity.User;
 import com.felip.rbac.security.CustomUserDetails;
 import com.felip.rbac.security.JwtService;
+import com.felip.rbac.security.TokenBlacklistService;
+import com.felip.rbac.security.VerifiedJwt;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,6 +21,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserService userService;
     private final JwtService jwtService;
+    private final TokenBlacklistService tokenBlacklistService;
 
     public UserResponse register(RegisterRequest request) {
         User user = userService.registerUser(
@@ -48,5 +52,12 @@ public class AuthService {
                 jwtService.getExpirationSeconds(),
                 UserResponse.from(principal.getUser())
         );
+    }
+
+    public void logout(String accessToken) {
+        VerifiedJwt verifiedToken = jwtService.verify(accessToken)
+                .orElseThrow(InvalidTokenException::new);
+
+        tokenBlacklistService.revoke(verifiedToken);
     }
 }
